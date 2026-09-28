@@ -238,6 +238,12 @@ tr.s td{font-weight:600;background:var(--sunk)}
 .paper .sig{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:22px;font-size:10.5px}
 .paper .sig div{border-top:1px solid #9AA4B2;padding-top:4px;color:#5B6879}
 .paper .ft{margin-top:14px;font-size:9.5px;color:#8793A3;display:flex;justify-content:space-between}
+.two.rep{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+@media (max-width:960px){.two.rep{grid-template-columns:minmax(0,1fr)}}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pwrap{position:relative;overflow:hidden;width:100%}
+.pwrap .paper{width:780px;transform-origin:top left;position:absolute;left:0;top:0}
+.prev-h{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 6px}
 /* settings */
 .brandlist{display:flex;flex-direction:column;gap:10px}
 .bitem{display:grid;grid-template-columns:110px 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px}
@@ -964,7 +970,7 @@ function reportModel(){ const rp=S.report,t=R.t,pen=boq('pen',R),conv=boq('conv'
   return {rp,t,pen,conv,sums:{sub,disc,net,tax,total},provisional:pen.flatMap(g=>g.opt.map(l=>({...l,st:g.s.st.name})))}; }
 function brandCards(){ return brands().map(b=>`<label><input type="radio" name="issuer" value="${b.id}" ${S.issuer.id===b.id?'checked':''} data-issuer="${b.id}"><img alt="" src="${b.logo||''}" ${b.logo?'':'hidden'}><span class="nm">${esc(b.name)}</span></label>`).join('')+`<label style="justify-content:center;align-items:center;border-style:dashed;background:var(--surface);color:var(--ink)" data-act="newBrand" role="button" tabindex="0"><span style="font-size:22px;line-height:1">+</span><span class="nm">Add distributor</span></label>`; }
 function renderReport(){ const rp=S.report,w=warnings(R).filter(x=>x[0]==='bad');
-  $('#view').innerHTML=`<div class="two" style="grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)"><div class="stack">
+  $('#view').innerHTML=`<div class="two rep"><div class="stack">
    <section class="panel"><div class="ph"><div><h2>Issued by</h2><p class="sub">Logo and company details printed on the report.</p></div><button class="sm" data-tab="settings">Manage</button></div><div class="pb"><div class="brandsel">${brandCards()}</div></div></section>
    <section class="panel"><div class="ph"><h2>Report content</h2></div><div class="pb opt-list">
     <div class="choice"><label><input type="radio" name="rmode" data-rmode="boq" ${rp.mode==='boq'?'checked':''}><span><b>Penetron BOQ</b><span>A clean bill of quantities, ready to send.</span></span></label>
@@ -972,13 +978,15 @@ function renderReport(){ const rp=S.report,w=warnings(R).filter(x=>x[0]==='bad')
     <label class="sw"><input type="checkbox" data-ro="priced" ${rp.priced?'checked':''}>Show rates and amounts (untick for an unpriced BOQ)</label>
     ${rp.mode==='compare'?`<label class="sw"><input type="checkbox" data-ro="convBoq" ${rp.convBoq?'checked':''}>Include the full conventional BOQ</label>`:''}
     <label class="sw"><input type="checkbox" data-ro="buildups" ${rp.buildups?'checked':''}>Include the rate build-ups (material + labour)</label>
-    <div class="grid" style="grid-template-columns:repeat(3,1fr)"><label class="f">Discount<div class="unit-in"><input type="number" inputmode="decimal" data-rf="discount" value="${esc(rp.discount)}"><span>%</span></div></label>
+    <div class="grid3"><label class="f">Discount<div class="unit-in"><input type="number" inputmode="decimal" data-rf="discount" value="${esc(rp.discount)}"><span>%</span></div></label>
      <label class="f">Tax / VAT<div class="unit-in"><input type="number" inputmode="decimal" data-rf="tax" value="${esc(rp.tax)}"><span>%</span></div></label>
      <label class="f">Valid for<div class="unit-in"><input type="number" inputmode="numeric" data-rf="validity" value="${esc(rp.validity)}"><span>days</span></div></label></div>
     <label class="f">Terms and notes<textarea rows="4" data-rf="terms">${esc(rp.terms)}</textarea></label></div></section>
    <section class="panel"><div class="pb stack" style="gap:10px">${w.length?`<div class="warn bad"><span class="ic">!</span><span>${w.length} issue${w.length>1?'s':''} to check first. <button class="sm ghost" data-tab="review">See Review →</button></span></div>`:''}
     <div class="row"><button class="primary" data-act="pdf">Download PDF</button><button data-act="csv">Download BOQ (CSV)</button><button data-act="copy">Copy summary</button></div><span class="hint">File: ${esc(fileBase())}.pdf</span></div></section></div>
-   <div><p class="hint" style="margin:0 0 6px">Preview (first page)</p><div class="paper" id="paper"></div></div></div>`; updPreview(); }
+   <div><div class="prev-h"><span class="hint">Preview</span><span class="hint">Scaled to fit your screen</span></div><div class="pwrap" id="pwrap"><div class="paper" id="paper"></div></div></div></div>`; updPreview(); }
+function fitPaper(){ const w=$('#pwrap'),p=$('#paper'); if(!w||!p) return; const k=Math.min(1,w.clientWidth/780); p.style.transform=`scale(${k})`; w.style.height=Math.ceil(p.offsetHeight*k)+'px'; }
+window.addEventListener('resize',()=>fitPaper());
 function updPreview(){ const P=$('#paper'); if(!P) return; const M=reportModel(),rp=M.rp,is=S.issuer,p=S.project,priced=rp.priced;
   P.style.setProperty('--acc',is.accent||'#00376F');
   const lines=g=>g.main.map(l=>`<tr><td>${l.code}</td><td>${esc(l.desc)}${l.assumed&&rp.buildups?' *':''}</td><td>${esc(l.unit)}</td><td class="n">${fq(l.qty)}</td>${priced?`<td class="n">${l.noRate?'TBC':m2(l.rate)}</td><td class="n">${l.noRate?'TBC':money(l.amt)}</td>`:''}</tr>`).join('');
@@ -993,7 +1001,8 @@ function updPreview(){ const P=$('#paper'); if(!P) return; const M=reportModel()
    ${rp.mode==='compare'?`<h5>Comparison with the conventional system</h5><table><thead><tr><th>Structure</th><th class="n">Conventional</th><th class="n">Penetron</th><th class="n">Difference</th></tr></thead><tbody>${R.structs.map(s=>`<tr><td>${esc(s.st.name)}</td><td class="n">${money(s.conv)}</td><td class="n">${money(s.pen)}</td><td class="n">${money(s.pen-s.conv)}</td></tr>`).join('')}${M.t.wait?`<tr><td>Waiting time avoided</td><td class="n">${money(M.t.wait)}</td><td class="n">${money(0)}</td><td class="n">${money(-M.t.wait)}</td></tr>`:''}<tr class="s"><td>Total</td><td class="n">${money(M.t.convAll)}</td><td class="n">${money(M.t.penAll)}</td><td class="n">${money(M.t.diff)}</td></tr></tbody></table><p style="font-weight:700;color:${M.t.diff<=0?'#1D7A4B':'#B42318'};margin:6px 0 0">${M.t.convAll?(M.t.diff<=0?`Penetron system is ${(Math.abs(M.t.pct)*100).toFixed(1)}% lower.`:`Penetron system is ${(M.t.pct*100).toFixed(1)}% higher on visible costs.`):''}</p>`:''}
    <h5>Terms</h5><div class="terms">${esc(rp.terms)}${num(rp.validity)?`\nThis estimate is valid for ${fq(num(rp.validity),0)} days from the date above.`:''}</div>
    <div class="sig"><div>Prepared by: ${esc(p.by||'')}</div><div>Accepted by client (name, signature, date)</div></div>
-   <div class="ft"><span>${esc(is.name)} · ${esc(p.no)}</span><span>Rates: ${esc(S.rates.meta.name||'unnamed')} · ${esc(cur())}</span></div>`; }
+   <div class="ft"><span>${esc(is.name)} · ${esc(p.no)}</span><span>Rates: ${esc(S.rates.meta.name||'unnamed')} · ${esc(cur())}</span></div>`;
+  fitPaper(); const im=P.querySelector('img'); if(im&&!im.complete) im.onload=fitPaper; }
 const slug=s=>(s||'estimate').replace(/[^\w\-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,50);
 const fileBase=()=>`${S.project.no}-${slug(S.project.name)}`;
 function summaryText(){ const t=R.t,p=S.project; return [`${p.name||'Untitled'} (${p.no}) — waterproofing`,...R.structs.map(s=>`${s.st.name}: Penetron ${money(s.pen)} vs conventional ${money(s.conv)}`),
